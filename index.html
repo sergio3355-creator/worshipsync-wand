@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WorshipSync Wand</title>
+<title>WorshipSync Beamer</title>
 <script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #060b1e; cursor: none; }
@@ -21,6 +21,9 @@
            font-family: "Roboto", "Noto Sans", Arial, sans-serif; }
   .layer.on { opacity: 1; }
   .l1 { color: #fff; font-weight: 700; line-height: 1.22; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); }
+  .ref { color: rgba(255,255,255,.7); font-weight: 600; letter-spacing: .02em; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); }
+  .p1 { color: #fff; font-weight: 600; line-height: 1.3; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); max-width: 88vw; }
+  .p2 { color: #ffd866; font-style: italic; line-height: 1.3; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); max-width: 88vw; }
   .l2 { color: #ffd866; font-style: italic; line-height: 1.22; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); }
   #idle { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.75);
           font: 600 3.2vh Arial, sans-serif; text-align: center; transition: opacity .6s ease; }
@@ -29,7 +32,7 @@
 <body>
 <div id="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
 <div id="shade"></div>
-<div id="idle">WorshipSync<br><span style="font-weight:400;font-size:2.4vh">bereit – bitte am Tablet ein Lied wählen</span></div>
+<div id="idle">WorshipSync<br><span style="font-weight:400;font-size:2.4vh">bereit – bitte am Tablet ein Lied oder eine Bibelstelle wählen</span></div>
 <div class="layer" id="L0"></div>
 <div class="layer" id="L1"></div>
 <script>
@@ -87,6 +90,30 @@
     }
   }
 
+  // Bibeltext: erste Zeile Stellenangabe, danach Absatz; Größe so, dass alles passt.
+  var PARA = "\u00a7\u00a7";
+  function buildPara(el, t1, t2) {
+    var a = lines(t1.substring(2)), b = t2 ? lines(t2.substring(t2.indexOf(PARA) === 0 ? 2 : 0)) : [];
+    var ref = a.length ? a[0] : "";
+    if (b.length && b[0]) ref += "   ·   " + b[0];
+    var p1 = a.slice(1).join(" "), p2 = b.slice(1).join(" ");
+    var h = window.innerHeight;
+    el.innerHTML = "";
+    var r = document.createElement("div"); r.className = "ref"; r.textContent = ref; el.appendChild(r);
+    var d1 = document.createElement("div"); d1.className = "p1"; d1.textContent = p1; el.appendChild(d1);
+    var d2 = null;
+    if (p2) { d2 = document.createElement("div"); d2.className = "p2"; d2.textContent = p2; el.appendChild(d2); }
+    var size = h * 0.075;
+    for (var i = 0; i < 40; i++) {
+      r.style.fontSize = (size * 0.55) + "px"; r.style.marginBottom = (size * 0.5) + "px";
+      d1.style.fontSize = size + "px";
+      if (d2) { d2.style.fontSize = (size * 0.85) + "px"; d2.style.marginTop = (size * 0.6) + "px"; }
+      var total = r.offsetHeight + d1.offsetHeight + (d2 ? d2.offsetHeight : 0) + size * 1.1;
+      if (total <= h * 0.9) break;
+      size *= 0.93;
+    }
+  }
+
   function show(t1, t2) {
     t1 = t1 || ""; t2 = t2 || "";
     document.getElementById("idle").style.opacity = "0";
@@ -97,14 +124,16 @@
     }
     if (visible && t1 === shown[0] && t2 === shown[1]) return;
     var next = visible ? 1 - active : active;
-    build(layers[next], t1, t2);
+    if (t1.indexOf(PARA) === 0) buildPara(layers[next], t1, t2); else build(layers[next], t1, t2);
     if (next !== active) layers[active].classList.remove("on");
     layers[next].classList.add("on");
     active = next; visible = true; shown = [t1, t2];
   }
 
   window.addEventListener("resize", function () {
-    if (visible) build(layers[active], shown[0], shown[1]);
+    if (!visible) return;
+    if (shown[0].indexOf(PARA) === 0) buildPara(layers[active], shown[0], shown[1]);
+    else build(layers[active], shown[0], shown[1]);
   });
 
   function handle(data) {
@@ -115,7 +144,12 @@
 
   // Im normalen Browser (ohne Cast) Vorschau: ?demo
   if (location.search.indexOf("demo") >= 0) {
-    show("Der HERR ist mein Hirte;\nmir wird nichts mangeln.", "Господь — Пастырь мой;\nя ни в чём не буду нуждаться.");
+    if (location.search.indexOf("bibel") >= 0) {
+      show(PARA + "Johannes 3,16\nAlso hat Gott die Welt geliebt, daß er seinen eingeborenen Sohn gab, auf daß alle, die an ihn glauben, nicht verloren werden, sondern das ewige Leben haben.",
+           PARA + "Иоанна 3:16\nИбо так возлюбил Бог мир, что отдал Сына Своего Единородного, дабы всякий верующий в Него, не погиб, но имел жизнь вечную.");
+    } else {
+      show("Der HERR ist mein Hirte;\nmir wird nichts mangeln.", "Господь — Пастырь мой;\nя ни в чём не буду нуждаться.");
+    }
   }
 
   if (window.cast && cast.framework) {
