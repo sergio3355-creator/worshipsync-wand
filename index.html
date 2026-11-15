@@ -15,7 +15,11 @@
   @keyframes m1 { from { left: -40vmax; top: -50vmax; } to { left: 30vmax; top: 10vmax; } }
   @keyframes m2 { from { left: 40vmax; top: 10vmax; } to { left: -30vmax; top: -40vmax; } }
   @keyframes m3 { from { left: 10vmax; top: -60vmax; } to { left: -20vmax; top: 20vmax; } }
-  #shade { position: fixed; inset: 0; background: rgba(0,0,0,.33); }
+  #custom { position: fixed; inset: 0; opacity: 0; transition: opacity 1s ease; background: #000; }
+  #custom.on { opacity: 1; }
+  #custom video, #custom .img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+                                 background-size: cover; background-position: center; }
+  #shade { position: fixed; inset: 0; background: rgba(0,0,0,.25); }
   .layer { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
            padding: 0 5vw; box-sizing: border-box; opacity: 0; transition: opacity .6s ease; text-align: center;
            font-family: "Roboto", "Noto Sans", Arial, sans-serif; }
@@ -31,6 +35,7 @@
 </head>
 <body>
 <div id="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div id="custom"></div>
 <div id="shade"></div>
 <div id="idle">WorshipSync<br><span style="font-weight:400;font-size:2.4vh">bereit – bitte am Tablet ein Lied oder eine Bibelstelle wählen</span></div>
 <div class="layer" id="L0"></div>
@@ -136,8 +141,50 @@
     else build(layers[active], shown[0], shown[1]);
   });
 
+  // ---------- Eigener Hintergrund (Bild/Video), vom Tablet in Stücken übertragen ----------
+  var bgParts = null, bgMeta = null, bgCache = {}, bgUrl = null;
+  function showBg(url, mime) {
+    var box = document.getElementById("custom");
+    box.innerHTML = "";
+    if (!url) { box.classList.remove("on"); return; }
+    if (mime.indexOf("video/") === 0) {
+      var v = document.createElement("video");
+      v.src = url; v.muted = true; v.loop = true; v.autoplay = true;
+      v.setAttribute("playsinline", ""); v.setAttribute("muted", "");
+      box.appendChild(v);
+      var p = v.play(); if (p && p.catch) p.catch(function () {});
+    } else {
+      var d = document.createElement("div");
+      d.className = "img";
+      d.style.backgroundImage = "url('" + url + "')";
+      box.appendChild(d);
+    }
+    box.classList.add("on");
+  }
+  function b64ToBytes(s) {
+    var bin = atob(s), arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return arr;
+  }
+  function handleBg(data) {
+    if (data.bg === "none") { showBg(null); return; }
+    if (data.bg === "begin") {
+      if (bgCache[data.id]) { bgParts = null; bgMeta = null; showBg(bgCache[data.id].url, bgCache[data.id].mime); return; }
+      bgMeta = data; bgParts = new Array(data.n); return;
+    }
+    if (data.bg === "part" && bgParts) { bgParts[data.i] = b64ToBytes(data.d); return; }
+    if (data.bg === "end" && bgParts && bgMeta) {
+      var blob = new Blob(bgParts, { type: bgMeta.mime });
+      var url = URL.createObjectURL(blob);
+      bgCache[bgMeta.id] = { url: url, mime: bgMeta.mime };
+      showBg(url, bgMeta.mime);
+      bgParts = null; bgMeta = null;
+    }
+  }
+
   function handle(data) {
     if (typeof data === "string") { try { data = JSON.parse(data); } catch (e) { return; } }
+    if (data && data.bg) { handleBg(data); return; }
     if (!data || data.t1 === undefined) return;
     show(data.t1, data.t2);
   }
