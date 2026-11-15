@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WorshipSync Wand</title>
+<script src="https://www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #060b1e; cursor: none; }
+  #bg { position: fixed; inset: 0; overflow: hidden; background: #060b1e; }
+  .blob { position: absolute; width: 110vmax; height: 110vmax; border-radius: 50%; filter: blur(4vmax); opacity: .55; }
+  .b1 { background: radial-gradient(circle, #2b5fd9 0%, transparent 62%); animation: m1 41s ease-in-out infinite alternate; }
+  .b2 { background: radial-gradient(circle, #7a2bd9 0%, transparent 62%); animation: m2 53s ease-in-out infinite alternate; }
+  .b3 { background: radial-gradient(circle, #0fa3a3 0%, transparent 62%); animation: m3 47s ease-in-out infinite alternate; }
+  @keyframes m1 { from { left: -40vmax; top: -50vmax; } to { left: 30vmax; top: 10vmax; } }
+  @keyframes m2 { from { left: 40vmax; top: 10vmax; } to { left: -30vmax; top: -40vmax; } }
+  @keyframes m3 { from { left: 10vmax; top: -60vmax; } to { left: -20vmax; top: 20vmax; } }
+  #shade { position: fixed; inset: 0; background: rgba(0,0,0,.33); }
+  .layer { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+           padding: 0 5vw; box-sizing: border-box; opacity: 0; transition: opacity .6s ease; text-align: center;
+           font-family: "Roboto", "Noto Sans", Arial, sans-serif; }
+  .layer.on { opacity: 1; }
+  .l1 { color: #fff; font-weight: 700; line-height: 1.22; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); }
+  .l2 { color: #ffd866; font-style: italic; line-height: 1.22; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); }
+  #idle { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.75);
+          font: 600 3.2vh Arial, sans-serif; text-align: center; transition: opacity .6s ease; }
+</style>
+</head>
+<body>
+<div id="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div id="shade"></div>
+<div id="idle">WorshipSync<br><span style="font-weight:400;font-size:2.4vh">bereit – bitte am Tablet ein Lied wählen</span></div>
+<div class="layer" id="L0"></div>
+<div class="layer" id="L1"></div>
+<script>
+  "use strict";
+  var NS = "urn:x-cast:de.sergio.worshipsync";
+  var RATIO2 = 0.72, SPACING = 1.22, PAIR_GAP = 0.34;
+  var layers = [document.getElementById("L0"), document.getElementById("L1")];
+  var active = 0, visible = false, shown = ["", ""];
+  var measure = document.createElement("canvas").getContext("2d");
+
+  function lines(t) { return t ? String(t).split("\n") : []; }
+
+  function widest(arr, font) {
+    measure.font = font;
+    var m = 0;
+    for (var i = 0; i < arr.length; i++) m = Math.max(m, measure.measureText(arr[i]).width);
+    return m;
+  }
+
+  // Baut eine Ebene: Zeilen abwechselnd erste / zweite Sprache, Größe passend zur Wand.
+  function build(el, t1, t2) {
+    var a = lines(t1), b = lines(t2);
+    var w = window.innerWidth, h = window.innerHeight;
+    var two = a.length > 0 && b.length > 0;
+    var rows = Math.max(a.length, b.length);
+    var gaps = two ? rows - 1 : 0;
+    var size = h * 0.085;
+    var units = a.length * SPACING + b.length * RATIO2 * SPACING + gaps * PAIR_GAP;
+    if (units * size > h * 0.86) size = h * 0.86 / units;
+    var maxW = w * 0.88;
+    var w1 = widest(a, "700 " + size + "px Roboto, Arial, sans-serif");
+    if (w1 > maxW) size *= maxW / w1;
+    var w2 = widest(b, "italic " + (size * RATIO2) + "px Roboto, Arial, sans-serif");
+    if (w2 > maxW) size *= maxW / w2;
+
+    el.innerHTML = "";
+    for (var r = 0; r < rows; r++) {
+      var last = r === rows - 1;
+      if (r < a.length) {
+        var d1 = document.createElement("div");
+        d1.className = "l1";
+        d1.textContent = a[r];
+        d1.style.fontSize = size + "px";
+        if (two && r >= b.length && !last) d1.style.marginBottom = (size * PAIR_GAP) + "px";
+        el.appendChild(d1);
+      }
+      if (r < b.length) {
+        var d2 = document.createElement("div");
+        d2.className = "l2";
+        d2.textContent = b[r];
+        d2.style.fontSize = (size * RATIO2) + "px";
+        if (two && !last) d2.style.marginBottom = (size * PAIR_GAP) + "px";
+        el.appendChild(d2);
+      }
+    }
+  }
+
+  function show(t1, t2) {
+    t1 = t1 || ""; t2 = t2 || "";
+    document.getElementById("idle").style.opacity = "0";
+    if (!t1 && !t2) {
+      layers[active].classList.remove("on");
+      visible = false;
+      return;
+    }
+    if (visible && t1 === shown[0] && t2 === shown[1]) return;
+    var next = visible ? 1 - active : active;
+    build(layers[next], t1, t2);
+    if (next !== active) layers[active].classList.remove("on");
+    layers[next].classList.add("on");
+    active = next; visible = true; shown = [t1, t2];
+  }
+
+  window.addEventListener("resize", function () {
+    if (visible) build(layers[active], shown[0], shown[1]);
+  });
+
+  function handle(data) {
+    if (typeof data === "string") { try { data = JSON.parse(data); } catch (e) { return; } }
+    if (!data || data.t1 === undefined) return;
+    show(data.t1, data.t2);
+  }
+
+  // Im normalen Browser (ohne Cast) Vorschau: ?demo
+  if (location.search.indexOf("demo") >= 0) {
+    show("Der HERR ist mein Hirte;\nmir wird nichts mangeln.", "Господь — Пастырь мой;\nя ни в чём не буду нуждаться.");
+  }
+
+  if (window.cast && cast.framework) {
+    var ctx = cast.framework.CastReceiverContext.getInstance();
+    ctx.addCustomMessageListener(NS, function (ev) { handle(ev.data); });
+    var opts = new cast.framework.CastReceiverOptions();
+    opts.disableIdleTimeout = true;
+    opts.customNamespaces = {};
+    opts.customNamespaces[NS] = cast.framework.system.MessageType.JSON;
+    ctx.start(opts);
+  }
+</script>
+</body>
+</html>
