@@ -27,6 +27,7 @@
   .l1 { color: #fff; font-weight: 700; line-height: 1.22; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); }
   .ref { color: rgba(255,255,255,.7); font-weight: 600; letter-spacing: .02em; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); }
   .p1 { color: #fff; font-weight: 600; line-height: 1.3; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); max-width: 88vw; }
+  .ref2 { color: rgba(255,216,102,.75); }
   .p2 { color: #ffd866; font-style: italic; line-height: 1.3; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); max-width: 88vw; }
   .l2 { color: #ffd866; font-style: italic; line-height: 1.22; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); }
   #idle { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.75);
@@ -99,21 +100,25 @@
   var PARA = "\u00a7\u00a7";
   function buildPara(el, t1, t2) {
     var a = lines(t1.substring(2)), b = t2 ? lines(t2.substring(t2.indexOf(PARA) === 0 ? 2 : 0)) : [];
-    var ref = a.length ? a[0] : "";
-    if (b.length && b[0]) ref += "   ·   " + b[0];
+    // Jede Stellenangabe steht direkt über ihrem Vers.
+    var ref = a.length ? a[0] : "", ref2 = b.length ? b[0] : "";
     var p1 = a.slice(1).join(" "), p2 = b.slice(1).join(" ");
     var h = window.innerHeight;
     el.innerHTML = "";
     var r = document.createElement("div"); r.className = "ref"; r.textContent = ref; el.appendChild(r);
     var d1 = document.createElement("div"); d1.className = "p1"; d1.textContent = p1; el.appendChild(d1);
-    var d2 = null;
-    if (p2) { d2 = document.createElement("div"); d2.className = "p2"; d2.textContent = p2; el.appendChild(d2); }
+    var d2 = null, r2 = null;
+    if (p2) {
+      if (ref2) { r2 = document.createElement("div"); r2.className = "ref ref2"; r2.textContent = ref2; el.appendChild(r2); }
+      d2 = document.createElement("div"); d2.className = "p2"; d2.textContent = p2; el.appendChild(d2);
+    }
     var size = h * 0.075;
     for (var i = 0; i < 40; i++) {
       r.style.fontSize = (size * 0.55) + "px"; r.style.marginBottom = (size * 0.5) + "px";
       d1.style.fontSize = size + "px";
-      if (d2) { d2.style.fontSize = (size * 0.85) + "px"; d2.style.marginTop = (size * 0.6) + "px"; }
-      var total = r.offsetHeight + d1.offsetHeight + (d2 ? d2.offsetHeight : 0) + size * 1.1;
+      if (r2) { r2.style.fontSize = (size * 0.5) + "px"; r2.style.marginTop = (size * 0.6) + "px"; r2.style.marginBottom = (size * 0.35) + "px"; }
+      if (d2) { d2.style.fontSize = (size * 0.85) + "px"; d2.style.marginTop = r2 ? "0px" : (size * 0.6) + "px"; }
+      var total = r.offsetHeight + d1.offsetHeight + (r2 ? r2.offsetHeight + size * 0.95 : 0) + (d2 ? d2.offsetHeight : 0) + size * 1.1;
       if (total <= h * 0.9) break;
       size *= 0.93;
     }
