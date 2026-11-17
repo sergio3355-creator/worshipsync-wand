@@ -30,6 +30,9 @@
   .ref2 { color: rgba(255,216,102,.75); }
   .p2 { color: #ffd866; font-style: italic; line-height: 1.3; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); max-width: 88vw; }
   .l2 { color: #ffd866; font-style: italic; line-height: 1.22; text-shadow: 0 .3vh .8vh rgba(0,0,0,.8); }
+  #credit { position: fixed; left: 0; right: 0; bottom: 3vh; text-align: center; color: rgba(255,255,255,.8); font: italic 400 2.6vh "Roboto", Arial, sans-serif;
+            text-shadow: 0 .2vh .6vh rgba(0,0,0,.8); opacity: 0; transition: opacity .6s ease; padding: 0 4vw; }
+  #credit.on { opacity: 1; }
   #idle { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.75);
           font: 600 3.2vh Arial, sans-serif; text-align: center; transition: opacity .6s ease; }
 </style>
@@ -41,6 +44,7 @@
 <div id="idle">WorshipSync<br><span style="font-weight:400;font-size:2.4vh">bereit – bitte am Tablet ein Lied oder eine Bibelstelle wählen</span></div>
 <div class="layer" id="L0"></div>
 <div class="layer" id="L1"></div>
+<div id="credit"></div>
 <script>
   "use strict";
   var NS = "urn:x-cast:de.sergio.worshipsync";
@@ -192,6 +196,9 @@
     if (data && data.bg) { handleBg(data); return; }
     if (!data || data.t1 === undefined) return;
     show(data.t1, data.t2);
+    var cr = document.getElementById("credit");
+    if (data.t3) cr.textContent = data.t3;
+    cr.className = data.t3 ? "on" : "";
   }
 
   // Im normalen Browser (ohne Cast) Vorschau: ?demo
