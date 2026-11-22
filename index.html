@@ -223,7 +223,7 @@
       "    if(k>.004){",
       "      vec3 g = vec3(bg(q-d*.72,asp).r, bg(q-d,asp).g, bg(q-d*1.28,asp).b);",
       "      c = mix(c,g,k); } }",
-      "  c *= 1.-sm((length((q-.5)*2.)-.65)/(1.42-.65));",
+      "  float e = clamp((length((q-.5)*2.)-.58)/(1.18-.58),0.,1.); c *= 1.-e*e*e*(e*(6.*e-15.)+10.);",
       "  gl_FragColor = vec4(c,1.); }"
     ].join("\n");
     function sh(type, src) { var o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o);
