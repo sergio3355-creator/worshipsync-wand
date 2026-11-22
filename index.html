@@ -196,7 +196,7 @@
 
 
   window.lionLevel = 5;
-  window.vigLevel = 6;   // Vignette 0…10 (wie Vignette.java), kommt als "vg"   // Stärke des Glas-Löwen 0…10, kommt als "lg" mit jeder Textnachricht
+  window.vigLevel = 6; window.vigStr = 10;   // Vignette 0…10 (wie Vignette.java), kommt als "vg"   // Stärke des Glas-Löwen 0…10, kommt als "lg" mit jeder Textnachricht
   // ---------- Standard-Hintergrund (wie „Wer schaut?“): Farbflecken + Löwe als verzerrtes Glas (wie BackgroundView.java) ----------
   (function () {
     var cv = document.getElementById("glass");
@@ -289,7 +289,7 @@
   function drawVignette() {
     var cv = document.getElementById("vig"), w = 192, h = Math.max(16, Math.round(192 * window.innerHeight / window.innerWidth));
     cv.width = w; cv.height = h;
-    var ctx = cv.getContext("2d"), img = ctx.createImageData(w, h), l = window.vigLevel;
+    var ctx = cv.getContext("2d"), img = ctx.createImageData(w, h), l = window.vigLevel, st = window.vigStr / 10;
     for (var j = 0; j < h; j++) for (var i = 0; i < w; i++) {
       var f = 1;
       if (l > 0) {
@@ -297,7 +297,7 @@
         var e = Math.min(1, Math.max(0, (Math.sqrt(ex * ex + ey * ey) - r0) / .6));
         f = 1 - e * e * e * (e * (6 * e - 15) + 10);
       }
-      img.data[(j * w + i) * 4 + 3] = Math.round((1 - f) * 255);
+      img.data[(j * w + i) * 4 + 3] = Math.round((1 - f) * st * 255);
     }
     ctx.putImageData(img, 0, 0);
   }
@@ -350,6 +350,7 @@
     if (data && data.bg) { handleBg(data); return; }
     if (!data || data.t1 === undefined) return;
     if (typeof data.lg === "number") window.lionLevel = Math.max(0, Math.min(10, data.lg));
+    if (typeof data.vs === "number" && data.vs !== window.vigStr) { window.vigStr = Math.max(0, Math.min(10, data.vs)); drawVignette(); }
     if (typeof data.vg === "number" && data.vg !== window.vigLevel) { window.vigLevel = Math.max(0, Math.min(10, data.vg)); drawVignette(); }
     if (typeof data.br === "number") setLook(data.br, data.ct || 0, data.sa || 0);
     if (data.f && setFont(data.f) && visible && data.t1 === shown[0] && (data.t2 || "") === shown[1]) rebuild();
