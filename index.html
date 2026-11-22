@@ -25,8 +25,7 @@
   #shade { position: fixed; inset: 0; background: rgba(0,0,0,.25); opacity: 0; transition: opacity 1s ease; }
   #custom.on ~ #shade { opacity: 1; }
   /* Vignette über eigenen Bildern/Videos (der Standard-Hintergrund rechnet sie im Shader) */
-  #vig { position: fixed; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 1s ease; }
-  #custom.on ~ #vig { opacity: 1; }
+  #vig { position: fixed; inset: 0; width: 100%; height: 100%; }
   .layer { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
            padding: 0 5vw; box-sizing: border-box; opacity: 0; transition: opacity .6s ease; text-align: center;
            font-family: "Roboto", "Noto Sans", Arial, sans-serif; }
@@ -271,13 +270,22 @@
         bp[2 * i] = 0.5 + 0.38 * Math.sin(t / SP[i] * 2 + PH[i]);
         bp[2 * i + 1] = 0.5 + 0.36 * Math.cos(t / (SP[i] + 3) * 2 + PH[i] * 1.7);
       }
-      gl.uniform2f(uRes, cv.width, cv.height); gl.uniform1f(uT, t); gl.uniform2fv(uBp, bp); gl.uniform1f(uLion, window.lionLevel); gl.uniform1f(uVig, window.vigLevel);
+      gl.uniform2f(uRes, cv.width, cv.height); gl.uniform1f(uT, t); gl.uniform2fv(uBp, bp); gl.uniform1f(uLion, window.lionLevel); gl.uniform1f(uVig, 0.);   // Rand macht die Überlagerung #vig über allen Hintergründen
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     }
     cv.classList.add("on");
     requestAnimationFrame(frame);
   })();
 
+  // Helligkeit/Kontrast/Sättigung −10…10 (wie Vignette.java), als CSS-Filter auf alle Hintergründe
+  var look = "";
+  function setLook(br, ct, sa) {
+    var f = (br || ct || sa) ? "brightness(" + (1 + .06 * br) + ") contrast(" + (1 + .05 * ct) + ") saturate(" + (1 + .08 * sa) + ")" : "";
+    if (f === look) return;
+    look = f;
+    document.getElementById("bg").style.filter = f;
+    document.getElementById("custom").style.filter = f;
+  }
   function drawVignette() {
     var cv = document.getElementById("vig"), w = 192, h = Math.max(16, Math.round(192 * window.innerHeight / window.innerWidth));
     cv.width = w; cv.height = h;
@@ -343,6 +351,7 @@
     if (!data || data.t1 === undefined) return;
     if (typeof data.lg === "number") window.lionLevel = Math.max(0, Math.min(10, data.lg));
     if (typeof data.vg === "number" && data.vg !== window.vigLevel) { window.vigLevel = Math.max(0, Math.min(10, data.vg)); drawVignette(); }
+    if (typeof data.br === "number") setLook(data.br, data.ct || 0, data.sa || 0);
     if (data.f && setFont(data.f) && visible && data.t1 === shown[0] && (data.t2 || "") === shown[1]) rebuild();
     show(data.t1, data.t2);
     var cr = document.getElementById("credit");
