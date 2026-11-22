@@ -41,6 +41,18 @@
   #credit.on { opacity: 1; }
   #idle { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.75);
           font: 600 3.2vh Arial, sans-serif; text-align: center; transition: opacity .6s ease; }
+  /* Bildschirm-Schriften (SIL OFL, Dateien in fonts/), Auswahl per "f" in der Textnachricht */
+  @font-face { font-family: "WS1 montserrat"; src: url(fonts/Montserrat-SemiBold.ttf); font-weight: 100 900; }
+  @font-face { font-family: "WS2 montserrat"; src: url(fonts/Montserrat-MediumItalic.ttf); font-style: italic; font-weight: 100 900; }
+  @font-face { font-family: "WS1 inter"; src: url(fonts/Inter-SemiBold.otf); font-weight: 100 900; }
+  @font-face { font-family: "WS2 inter"; src: url(fonts/Inter-MediumItalic.otf); font-style: italic; font-weight: 100 900; }
+  @font-face { font-family: "WS1 nunito"; src: url(fonts/NunitoSans-SemiBold.ttf); font-weight: 100 900; }
+  @font-face { font-family: "WS2 nunito"; src: url(fonts/NunitoSans-Italic.ttf); font-style: italic; font-weight: 100 900; }
+  @font-face { font-family: "WS1 manrope"; src: url(fonts/Manrope-SemiBold.ttf); font-weight: 100 900; }
+  @font-face { font-family: "WS2 manrope"; src: url(fonts/Manrope-Medium.ttf); font-weight: 100 900; }
+  :root { --f1: "WS1 montserrat", Roboto, Arial, sans-serif; --f2: "WS2 montserrat", Roboto, Arial, sans-serif; }
+  .l1, .ref, .p1 { font-family: var(--f1); }
+  .l2, .p2, .ref2 { font-family: var(--f2); }
 </style>
 </head>
 <body>
@@ -58,6 +70,30 @@
   var layers = [document.getElementById("L0"), document.getElementById("L1")];
   var active = 0, visible = false, shown = ["", ""];
   var measure = document.createElement("canvas").getContext("2d");
+
+  // ---------- Schrift (gleich wie ScreenFont.java am Tablet) ----------
+  var FONTS = { montserrat: 1, inter: 1, nunito: 1, manrope: 1, system: 1 };
+  var fontKey = "montserrat", FONT1 = "", FONT2 = "";
+  function setFont(k) {
+    if (!FONTS[k]) k = "montserrat";
+    if (k === fontKey && FONT1) return false;
+    fontKey = k;
+    if (k === "system") { FONT1 = 'Roboto, Arial, sans-serif'; FONT2 = FONT1; }
+    else { FONT1 = '"WS1 ' + k + '", Roboto, Arial, sans-serif'; FONT2 = '"WS2 ' + k + '", Roboto, Arial, sans-serif'; }
+    document.documentElement.style.setProperty("--f1", FONT1);
+    document.documentElement.style.setProperty("--f2", FONT2);
+    if (document.fonts && document.fonts.load && k !== "system") {
+      // erst messen, wenn die Schrift geladen ist – sonst stimmt die Größe nicht
+      Promise.all([document.fonts.load("700 40px " + FONT1), document.fonts.load("italic 40px " + FONT2)])
+        .then(function () { if (visible) rebuild(); }, function () {});
+    }
+    return true;
+  }
+  function rebuild() {
+    if (shown[0].indexOf(PARA) === 0) buildPara(layers[active], shown[0], shown[1]);
+    else build(layers[active], shown[0], shown[1]);
+  }
+  setFont("montserrat");
 
   function lines(t) { return t ? String(t).split("\n") : []; }
 
@@ -78,10 +114,10 @@
     var size = h * 0.085;
     var units = a.length * SPACING + b.length * RATIO2 * SPACING + gaps * PAIR_GAP;
     if (units * size > h * 0.86) size = h * 0.86 / units;
-    var maxW = w * 0.88;
-    var w1 = widest(a, "700 " + size + "px Roboto, Arial, sans-serif");
+    var maxW = w * 0.80;   // Text bleibt innerhalb des weichen Randes
+    var w1 = widest(a, "700 " + size + "px " + FONT1);
     if (w1 > maxW) size *= maxW / w1;
-    var w2 = widest(b, "italic " + (size * RATIO2) + "px Roboto, Arial, sans-serif");
+    var w2 = widest(b, "italic " + (size * RATIO2) + "px " + FONT2);
     if (w2 > maxW) size *= maxW / w2;
 
     el.innerHTML = "";
@@ -280,6 +316,7 @@
     if (typeof data === "string") { try { data = JSON.parse(data); } catch (e) { return; } }
     if (data && data.bg) { handleBg(data); return; }
     if (!data || data.t1 === undefined) return;
+    if (data.f && setFont(data.f) && visible && data.t1 === shown[0] && (data.t2 || "") === shown[1]) rebuild();
     show(data.t1, data.t2);
     var cr = document.getElementById("credit");
     if (data.t3) cr.textContent = data.t3;
